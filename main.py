@@ -59,4 +59,4 @@ async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
     photo_file = next((f for f in os.listdir("recipe_images") if f.startswith(number)), None)
     if photo_file:
         with open(os.path.join("recipe_images", photo_file), "rb") as photo:
-            await context.bot.send_photo(chat_id=CHAT_ID, photo=p_
+            await context.bot.send_photo(chat_id=CHAT_ID, photo=p_)
