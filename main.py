@@ -7,7 +7,6 @@ import asyncio
 from flask import Flask
 import threading
 
-
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -42,14 +41,6 @@ async def send_smoothie(context: ContextTypes.DEFAULT_TYPE):
     with open(image_path, "rb") as photo:
         await context.bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=text, parse_mode="HTML")
 
-# === Обработчик команды ===
-async def test_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=CHAT_ID, text="🛠 Тестовая команда активирована")
-    await send_smoothie(context)
-    await asyncio.sleep(1)
-    await send_recipe(context)
-
-
 # === Отправка рецепта ===
 async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
     unused = [row for idx, row in recipes.iterrows() if str(row["Unnamed: 0"]) not in history["recipes"]]
@@ -70,17 +61,42 @@ async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
     photo_file = next((f for f in os.listdir("recipe_images") if f.startswith(number)), None)
     if photo_file:
         with open(os.path.join("recipe_images", photo_file), "rb") as photo:
-            await context.bot.send_photo(chat_id=CHAT_ID, photo=p_)
-            from flask import Flask
-import threading
+            await context.bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=text[:1024], parse_mode="HTML")
+    else:
+        await context.bot.send_message(chat_id=CHAT_ID, text=text[:4096], parse_mode="HTML")
 
-app = Flask(__name__)
+# === Обработчик команды ===
+async def test_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await context.bot.send_message(chat_id=CHAT_ID, text="🛠 Тестовая команда активирована")
+    await send_smoothie(context)
+    await asyncio.sleep(1)
+    await send_recipe(context)
 
-@app.route('/')
-def home():
-    return 'Bot is alive'
+# === Планировщик ===
+scheduler = BackgroundScheduler()
+scheduler.add_job(send_smoothie, "interval", minutes=60, args=[ContextTypes.DEFAULT_TYPE])
+scheduler.add_job(send_recipe, "interval", minutes=90, args=[ContextTypes.DEFAULT_TYPE])
+scheduler.start()
 
-def run_flask():
-    app.run(host="0.0.0.0", port=10000)
+# === Запуск приложения ===
+async def main():
+    application = Application.builder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler("test", test_handler))
+    logging.info("Тест-бот запущен.")
+    await application.run_polling()
 
-threading.Thread(target=run_flask).start()
+if __name__ == "__main__":
+    nest_asyncio.apply()
+    asyncio.run(main())
+
+    # === Flask server to keep Render.com instance alive ===
+    app = Flask(__name__)
+
+    @app.route("/")
+    def home():
+        return "Bot is alive"
+
+    def run_flask():
+        app.run(host="0.0.0.0", port=10000)
+
+    threading.Thread(target=run_flask).start()
