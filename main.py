@@ -4,7 +4,7 @@ import random
 import logging
 import pandas as pd
 from telegram import Update, Bot
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes
 from apscheduler.schedulers.background import BackgroundScheduler
 import asyncio
 
@@ -74,8 +74,11 @@ async def test_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     send_recipe()
 
 # === Запуск приложения ===
-if __name__ == '__main__':
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("test", test_handler))
+async def main():
+    application = Application.builder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler("test", test_handler))
     logging.info("Тест-бот запущен.")
-    app.run_polling()
+    await application.run_polling()
+
+if __name__ == '__main__':
+    asyncio.run(main())
