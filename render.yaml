@@ -1,0 +1,7 @@
+services:
+  - type: worker
+    name: receptor-bot
+    runtime: python
+    plan: free
+    buildCommand: ""
+    startCommand: python main.py
