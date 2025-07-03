@@ -39,6 +39,14 @@ async def send_smoothie(context: ContextTypes.DEFAULT_TYPE):
     with open(image_path, "rb") as photo:
         await context.bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=text, parse_mode="HTML")
 
+# === Обработчик команды ===
+async def test_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await context.bot.send_message(chat_id=CHAT_ID, text="🛠 Тестовая команда активирована")
+    await send_smoothie(context)
+    await asyncio.sleep(1)
+    await send_recipe(context)
+
+
 # === Отправка рецепта ===
 async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
     unused = [row for idx, row in recipes.iterrows() if str(row["Unnamed: 0"]) not in history["recipes"]]
