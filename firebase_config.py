@@ -15,13 +15,24 @@ firebase_admin.initialize_app(cred, {
 
 # === Функции ===
 
+
 def load_history():
     ref = db.reference("history")
     history = ref.get()
-    if history is None:
-        history = {"smoothies": [], "recipes": [], "image_index": 0}
-        ref.set(history)
+    if not isinstance(history, dict):
+        history = {}
+
+    # Гарантируем наличие нужных ключей
+    if "smoothies" not in history:
+        history["smoothies"] = []
+    if "recipes" not in history:
+        history["recipes"] = []
+    if "image_index" not in history:
+        history["image_index"] = 0
+
+    ref.set(history)  # сохраняем исправленную структуру
     return history
+
 
 def save_history(history):
     ref = db.reference("history")
