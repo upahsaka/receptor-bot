@@ -22,7 +22,7 @@ recipes = pd.read_excel("recaur.xlsx")
 
 # === Хранилище истории ===
 from firebase_config import save_history, load_history
-
+logging.info("🔥 Проверка Firebase — загружаю историю...")
 history = load_history()
 from firebase_config import db
 
