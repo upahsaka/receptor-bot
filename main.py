@@ -5,8 +5,6 @@ import json
 import pandas as pd
 import nest_asyncio
 import asyncio
-from flask import Flask
-import threading
 
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -23,16 +21,10 @@ smoothies = pd.read_excel("smned.xlsx")
 recipes = pd.read_excel("recaur.xlsx")
 
 # === Хранилище истории ===
-HISTORY_FILE = "history.json"
-if os.path.exists(HISTORY_FILE):
-    with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-        history = json.load(f)
-else:
-    history = {"smoothies": [], "recipes": [], "image_index": 0}
+from firebase_config import save_history, load_history
 
-def save_history():
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(history, f, ensure_ascii=False, indent=2)
+history = load_history()
+from firebase_config import db
 
 # === Отправка смузи ===
 async def send_smoothie(context: ContextTypes.DEFAULT_TYPE):
@@ -118,20 +110,10 @@ scheduler.add_job(send_recipe, "interval", minutes=90, args=[ContextTypes.DEFAUL
 if __name__ == "__main__":
     nest_asyncio.apply()
 
-    app_flask = Flask(__name__)
-
-    @app_flask.route("/")
-    def home():
-        return "Bot is alive"
-
-    def run_flask():
-        app_flask.run(host="0.0.0.0", port=10000)
-
-    threading.Thread(target=run_flask).start()
-
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("test", test_handler))
-    scheduler.start()
 
-    logging.info("Бот и Flask запущены.")
-    application.run_polling()
+    logging.info("Бот запущен.")
+    asyncio.run(application.initialize())
+    asyncio.get_event_loop().run_forever()
+
