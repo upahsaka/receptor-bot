@@ -2,5 +2,5 @@ python-telegram-bot==20.8
 apscheduler
 pandas
 openpyxl
+firebase-admin
 nest_asyncio
-flask
