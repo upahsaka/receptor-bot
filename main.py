@@ -50,7 +50,8 @@ async def send_smoothie(context: ContextTypes.DEFAULT_TYPE):
     history["image_index"] += 1
     save_history()
 
-    text = f"🥤 <b>Смузи недели:</b>
+   text = f"🥤 <b>Смузи недели:</b>\n\n<b>{smoothie['Название']}</b>\n\n{smoothie['Приготовление']}"
+
 
 <b>{smoothie['Название']}</b>
 
