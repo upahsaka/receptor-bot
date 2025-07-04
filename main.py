@@ -113,6 +113,8 @@ if __name__ == "__main__":
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("test", test_handler))
 
+    scheduler.start()  # ← ЭТОГО НЕ ХВАТАЛО
+
     logging.info("Бот запущен.")
     asyncio.run(application.initialize())
     asyncio.get_event_loop().run_forever()
