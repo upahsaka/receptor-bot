@@ -9,7 +9,8 @@ cred_dict = json.loads(os.environ["FIREBASE_KEY_JSON"])
 # Инициализируем Firebase
 cred = credentials.Certificate(cred_dict)
 firebase_admin.initialize_app(cred, {
-    'databaseURL': 'https://receptorfirebase-default-rtdb.firebaseio.com/'
+     'databaseURL': 'https://receptorfirebase-default-rtdb.europe-west1.firebasedatabase.app/'
+
 })
 
 # === Функции ===
