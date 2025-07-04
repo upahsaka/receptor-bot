@@ -35,12 +35,12 @@ async def send_smoothie(context: ContextTypes.DEFAULT_TYPE):
         unused = [row for _, row in smoothies.iterrows()]
     smoothie = random.choice(unused)
     history["smoothies"].append(str(smoothie["Номер"]))
-    save_history()
+    save_history(history)
 
     image_files = sorted(os.listdir("smoothie_images"))
     image_path = os.path.join("smoothie_images", image_files[history["image_index"] % len(image_files)])
     history["image_index"] += 1
-    save_history()
+    save_history(history)
 
     heading = "🥤 <b>Смузи недели</b>\n🍃 Из коллекции школы йоги ISVARA 🍃\n\n"
     title = f"<b>{smoothie['Название']}</b>"
@@ -66,7 +66,7 @@ async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
         unused = [row for _, row in recipes.iterrows()]
     recipe = random.choice(unused)
     history["recipes"].append(str(recipe["Unnamed: 0"]))
-    save_history()
+    save_history(history)
 
     heading = "<b>ВЕГЕТАРИАНСКИЙ РЕЦЕПТ НА ВЫХОДНЫЕ</b>\n🍃 Из коллекции школы йоги ISVARA 🍃\n\n"
     title = f"<b>{recipe['Название рецепта']}</b>"
