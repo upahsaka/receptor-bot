@@ -1,5 +1,5 @@
 services:
-  - type: worker
+  - type: web
     name: receptor-bot
     runtime: python
     plan: free
