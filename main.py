@@ -50,7 +50,7 @@ async def send_smoothie(context: ContextTypes.DEFAULT_TYPE):
     save_history()
 
     heading = "🥤 <b>Смузи недели</b>
-🍃Из коллекции школы йоги ISVARA🍃
+🍃Из коллекции школы йоги ISVARA🍃"
 
 "
     title = f"<b>{smoothie['Название']}</b>"
@@ -81,7 +81,7 @@ async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
     save_history()
 
     heading = "<b>🍲 ВЕГЕТАРИАНСКИЙ РЕЦЕПТ НА ВЫХОДНЫЕ</b>
-🍃Из коллекции школы йоги ISVARA🍃
+🍃Из коллекции школы йоги ISVARA🍃"
 
 "
     title = f"<b>{recipe['Название рецепта']}</b>"
