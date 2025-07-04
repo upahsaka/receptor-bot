@@ -80,8 +80,8 @@ async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
     history["recipes"].append(str(recipe["Unnamed: 0"]))
     save_history()
 
-    heading = "<b>ВЕГЕТАРИАНСКИЙ РЕЦЕПТ НА ВЫХОДНЫЕ</b>
-🍃 Из коллекции школы йоги ISVARA 🍃
+    heading = "<b>🍲 ВЕГЕТАРИАНСКИЙ РЕЦЕПТ НА ВЫХОДНЫЕ</b>
+🍃Из коллекции школы йоги ISVARA🍃
 
 "
     title = f"<b>{recipe['Название рецепта']}</b>"
