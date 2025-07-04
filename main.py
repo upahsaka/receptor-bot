@@ -50,12 +50,9 @@ async def send_smoothie(context: ContextTypes.DEFAULT_TYPE):
     history["image_index"] += 1
     save_history()
 
-   text = f"🥤 <b>Смузи недели:</b>\n\n<b>{smoothie['Название']}</b>\n\n{smoothie['Приготовление']}"
+    text = f"🥤 <b>Смузи недели:</b>\n\n<b>{smoothie['Название']}</b>\n\n{smoothie['Приготовление']}"
 
 
-<b>{smoothie['Название']}</b>
-
-{smoothie['Приготовление']}"
     try:
         with open(image_path, "rb") as photo:
             await context.bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=text[:1024], parse_mode="HTML")
@@ -73,7 +70,8 @@ async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
     history["recipes"].append(str(recipe["Unnamed: 0"]))
     save_history()
 
-    heading = "<b>🍲 Вегетарианский рецепт на выходные:</b>"
+    heading = "<b>🍲 ВЕГЕТАРИАНСКИЙ РЕЦЕПТ НА ВЫХОДНЫЕ</b>\n🍃 Из коллекции рецептов школы йоги ISVARA 🍃\n\n"
+    
     title = f"<b>{recipe['Название рецепта']}</b>"
     body_parts = []
     for col in ["описание-порции", "Ингредиенты", "Приготовление (шаги)", "Финальный абзац (польза/советы)"]:
