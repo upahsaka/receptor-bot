@@ -49,8 +49,7 @@ async def send_smoothie(context: ContextTypes.DEFAULT_TYPE):
     history["image_index"] += 1
     save_history()
 
-    heading = "🥤 <b>Смузи недели</b>
-🍃Из коллекции школы йоги ISVARA🍃"
+    heading = "🥤 <b>Смузи недели</b>\n🍃 Из коллекции школы йоги ISVARA 🍃\n"
 
 "
     title = f"<b>{smoothie['Название']}</b>"
@@ -80,8 +79,7 @@ async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
     history["recipes"].append(str(recipe["Unnamed: 0"]))
     save_history()
 
-    heading = "<b>🍲 ВЕГЕТАРИАНСКИЙ РЕЦЕПТ НА ВЫХОДНЫЕ</b>
-🍃Из коллекции школы йоги ISVARA🍃"
+    heading = "<b>🍲 ВЕГЕТАРИАНСКИЙ РЕЦЕПТ НА ВЫХОДНЫЕ</b>🍃Из коллекции школы йоги ISVARA🍃"
 
 "
     title = f"<b>{recipe['Название рецепта']}</b>"
