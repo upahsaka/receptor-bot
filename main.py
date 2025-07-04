@@ -1,14 +1,17 @@
 import os
 import random
 import logging
-import json
 import pandas as pd
 import nest_asyncio
 import asyncio
+import threading
+from flask import Flask
 
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from apscheduler.schedulers.background import BackgroundScheduler
+
+from firebase_config import save_history, load_history, db
 
 # === НАСТРОЙКИ ===
 BOT_TOKEN = "7967951425:AAGraODHxLUvfWR-kcVmTC4ExygjuO2tIQ0"
@@ -20,11 +23,9 @@ logging.basicConfig(level=logging.INFO)
 smoothies = pd.read_excel("smned.xlsx")
 recipes = pd.read_excel("recaur.xlsx")
 
-# === Хранилище истории ===
-from firebase_config import save_history, load_history
+# === История через Firebase ===
 logging.info("🔥 Проверка Firebase — загружаю историю...")
 history = load_history()
-from firebase_config import db
 
 # === Отправка смузи ===
 async def send_smoothie(context: ContextTypes.DEFAULT_TYPE):
@@ -67,7 +68,7 @@ async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
     history["recipes"].append(str(recipe["Unnamed: 0"]))
     save_history()
 
-    heading = "<b>🍲 ВЕГЕТАРИАНСКИЙ РЕЦЕПТ НА ВЫХОДНЫЕ</b>\n🍃 Из коллекции школы йоги ISVARA 🍃\n\n"
+    heading = "<b>ВЕГЕТАРИАНСКИЙ РЕЦЕПТ НА ВЫХОДНЫЕ</b>\n🍃 Из коллекции школы йоги ISVARA 🍃\n\n"
     title = f"<b>{recipe['Название рецепта']}</b>"
     body_parts = []
     for col in ["описание-порции", "Ингредиенты", "Приготовление (шаги)", "Финальный абзац (польза/советы)"]:
@@ -106,16 +107,23 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(send_smoothie, "interval", minutes=60, args=[ContextTypes.DEFAULT_TYPE])
 scheduler.add_job(send_recipe, "interval", minutes=90, args=[ContextTypes.DEFAULT_TYPE])
 
-# === Flask и Бот ===
+# === Flask-сервер для Render ===
+app_flask = Flask(__name__)
+
+@app_flask.route("/")
+def home():
+    return "Bot is alive"
+
+# === Запуск ===
 if __name__ == "__main__":
     nest_asyncio.apply()
 
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("test", test_handler))
 
-    scheduler.start()  # ← ЭТОГО НЕ ХВАТАЛО
+    scheduler.start()
+
+    threading.Thread(target=lambda: app_flask.run(host="0.0.0.0", port=10000)).start()
 
     logging.info("Бот запущен.")
-    asyncio.run(application.initialize())
-    asyncio.get_event_loop().run_forever()
-
+    application.run_polling()
