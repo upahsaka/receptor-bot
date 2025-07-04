@@ -4,13 +4,14 @@ import random
 import logging
 import json
 import pandas as pd
+import nest_asyncio
 import asyncio
-
 from flask import Flask
-from threading import Thread
+import threading
+
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # === НАСТРОЙКИ ===
 BOT_TOKEN = "7967951425:AAGraODHxLUvfWR-kcVmTC4ExygjuO2tIQ0"
@@ -49,15 +50,17 @@ async def send_smoothie(context: ContextTypes.DEFAULT_TYPE):
     history["image_index"] += 1
     save_history()
 
-    logging.info(f"📷 Пробуем отправить файл: {image_path}")
-    text = f"\U0001F964 <b>Смузи недели:</b>\n\n<b>{smoothie['Название']}</b>\n\n{smoothie['Приготовление']}"
+    text = f"🥤 <b>Смузи недели:</b>
 
+<b>{smoothie['Название']}</b>
+
+{smoothie['Приготовление']}"
     try:
         with open(image_path, "rb") as photo:
-            await context.bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=text, parse_mode="HTML")
+            await context.bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=text[:1024], parse_mode="HTML")
     except Exception as e:
-        logging.warning(f"❗ Ошибка при отправке файла {image_path}: {e}")
-        await context.bot.send_message(chat_id=CHAT_ID, text="⚠️ Не удалось отправить смузи с фото.\n" + text, parse_mode="HTML")
+        logging.warning(f"❗ Ошибка при отправке смузи {image_path}: {e}")
+        await context.bot.send_message(chat_id=CHAT_ID, text=text[:4096], parse_mode="HTML")
 
 # === Отправка рецепта ===
 async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
@@ -69,55 +72,64 @@ async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
     history["recipes"].append(str(recipe["Unnamed: 0"]))
     save_history()
 
-    text_parts = [f"\U0001F372 <b>{recipe['Название рецепта']}</b>"]
+    heading = "<b>🍲 Вегетарианский рецепт на выходные:</b>"
+    title = f"<b>{recipe['Название рецепта']}</b>"
+    body_parts = []
     for col in ["описание-порции", "Ингредиенты", "Приготовление (шаги)", "Финальный абзац (польза/советы)"]:
         val = recipe.get(col)
         if isinstance(val, str) and val.strip():
-            text_parts.append(val.strip())
-    text = "\n\n".join(text_parts)
+            body_parts.append(val.strip())
+    body = "\n\n".join(body_parts)
+    full_text = f"{title}\n\n{body}".strip()
 
     number = str(recipe["Unnamed: 0"])
     photo_file = next((f for f in os.listdir("recipe_images") if f.startswith(number)), None)
-    if photo_file:
-        try:
-            with open(os.path.join("recipe_images", photo_file), "rb") as photo:
-                await context.bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=text[:1024], parse_mode="HTML")
-        except Exception as e:
-            logging.warning(f"❗ Ошибка при отправке рецепта {photo_file}: {e}")
-            await context.bot.send_message(chat_id=CHAT_ID, text=text[:4096], parse_mode="HTML")
-    else:
-        await context.bot.send_message(chat_id=CHAT_ID, text=text[:4096], parse_mode="HTML")
 
-# === Обработчик команды /test ===
+    try:
+        await context.bot.send_message(chat_id=CHAT_ID, text=heading, parse_mode="HTML")
+        if photo_file:
+            with open(os.path.join("recipe_images", photo_file), "rb") as photo:
+                if len(full_text) <= 1024:
+                    await context.bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=full_text, parse_mode="HTML")
+                else:
+                    await context.bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=title, parse_mode="HTML")
+                    await context.bot.send_message(chat_id=CHAT_ID, text=body[:4096], parse_mode="HTML")
+        else:
+            await context.bot.send_message(chat_id=CHAT_ID, text=full_text[:4096], parse_mode="HTML")
+    except Exception as e:
+        logging.warning(f"❗ Ошибка при отправке рецепта {photo_file}: {e}")
+        await context.bot.send_message(chat_id=CHAT_ID, text=f"{heading}\n\n{full_text[:4096]}", parse_mode="HTML")
+
+# === Тестовая команда ===
 async def test_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=CHAT_ID, text="🛠 Тестовая команда активирована")
     await send_smoothie(context)
     await asyncio.sleep(1)
     await send_recipe(context)
 
-# === Flask сервер для Render ===
-app = Flask(__name__)
-@app.route("/")
-def home():
-    return "Bot is alive"
+# === Планировщик ===
+scheduler = BackgroundScheduler()
+scheduler.add_job(send_smoothie, "interval", minutes=60, args=[ContextTypes.DEFAULT_TYPE])
+scheduler.add_job(send_recipe, "interval", minutes=90, args=[ContextTypes.DEFAULT_TYPE])
 
-def run_flask():
-    app.run(host="0.0.0.0", port=10000)
+# === Flask и Бот ===
+if __name__ == "__main__":
+    nest_asyncio.apply()
 
-# === Главный запуск ===
-async def main():
-    Thread(target=run_flask).start()
+    app_flask = Flask(__name__)
+
+    @app_flask.route("/")
+    def home():
+        return "Bot is alive"
+
+    def run_flask():
+        app_flask.run(host="0.0.0.0", port=10000)
+
+    threading.Thread(target=run_flask).start()
 
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("test", test_handler))
-
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(send_smoothie, "interval", minutes=60, args=[application.bot])
-    scheduler.add_job(send_recipe, "interval", minutes=90, args=[application.bot])
     scheduler.start()
 
     logging.info("Бот и Flask запущены.")
-    await application.run_polling()
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    application.run_polling()
