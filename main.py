@@ -1,6 +1,7 @@
 import os
 import random
 import logging
+import json
 import pandas as pd
 import nest_asyncio
 import asyncio
@@ -22,7 +23,13 @@ smoothies = pd.read_excel("smned.xlsx")
 recipes = pd.read_excel("recaur.xlsx")
 
 # === Хранилище ===
-history = {"smoothies": [], "recipes": [], "image_index": 0}
+HISTORY_FILE = "history.json"
+if os.path.exists(HISTORY_FILE):
+    with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+        history = json.load(f)
+else:
+    history = {"smoothies": [], "recipes": [], "image_index": 0}
+
 
 # === Отправка смузи ===
 async def send_smoothie(context: ContextTypes.DEFAULT_TYPE):
@@ -32,6 +39,9 @@ async def send_smoothie(context: ContextTypes.DEFAULT_TYPE):
         unused = [row for idx, row in smoothies.iterrows()]
     smoothie = random.choice(unused)
     history["smoothies"].append(str(smoothie["Номер"]))
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+
 
     image_files = sorted(os.listdir("smoothie_images"))
     image_path = os.path.join("smoothie_images", image_files[history["image_index"] % len(image_files)])
@@ -49,6 +59,9 @@ async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
         unused = [row for idx, row in recipes.iterrows()]
     recipe = random.choice(unused)
     history["recipes"].append(str(recipe["Unnamed: 0"]))
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+
 
     text_parts = [f"\U0001F372 <b>{recipe['Название рецепта']}</b>"]
     for col in ["описание-порции", "Ингредиенты", "Приготовление (шаги)", "Финальный абзац (польза/советы)"]:
