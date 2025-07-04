@@ -14,7 +14,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from firebase_config import save_history, load_history, db
 
 # === НАСТРОЙКИ ===
-BOT_TOKEN = "7967951425:AAGraODHxLUvfWR-kcVmTC4ExygjuO2tIQ0"
+BOT_TOKEN = "7967951425:AAF7cvpngiLcUeKzLWtCWQO9JzFI5xMzY98"
 CHAT_ID = 924655176
 
 logging.basicConfig(level=logging.INFO)
