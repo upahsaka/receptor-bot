@@ -49,14 +49,10 @@ async def send_smoothie(context: ContextTypes.DEFAULT_TYPE):
     history["image_index"] += 1
     save_history()
 
-    heading = "🥤 <b>Смузи недели</b>\n🍃 Из коллекции школы йоги ISVARA 🍃\n"
-
-"
+    heading = "🥤 <b>Смузи недели</b>\n🍃 Из коллекции школы йоги ISVARA 🍃\n\n"
     title = f"<b>{smoothie['Название']}</b>"
     body = smoothie['Приготовление']
-    full_text = f"{heading}{title}
-
-{body}"
+    full_text = f"{heading}{title}\n\n{body}"
 
     try:
         with open(image_path, "rb") as photo:
@@ -79,21 +75,15 @@ async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
     history["recipes"].append(str(recipe["Unnamed: 0"]))
     save_history()
 
-    heading = "<b>ВЕГЕТАРИАНСКИЙ РЕЦЕПТ НА ВЫХОДНЫЕ</b>🍃Из коллекции школы йоги ISVARA🍃"
-
-"
+    heading = "<b>🍲 ВЕГЕТАРИАНСКИЙ РЕЦЕПТ НА ВЫХОДНЫЕ</b>\n🍃 Из коллекции школы йоги ISVARA 🍃\n\n"
     title = f"<b>{recipe['Название рецепта']}</b>"
     body_parts = []
     for col in ["описание-порции", "Ингредиенты", "Приготовление (шаги)", "Финальный абзац (польза/советы)"]:
         val = recipe.get(col)
         if isinstance(val, str) and val.strip():
             body_parts.append(val.strip())
-    body = "
-
-".join(body_parts)
-    full_text = f"{heading}{title}
-
-{body}".strip()
+    body = "\n\n".join(body_parts)
+    full_text = f"{heading}{title}\n\n{body}".strip()
 
     number = str(recipe["Unnamed: 0"])
     photo_file = next((f for f in os.listdir("recipe_images") if f.startswith(number)), None)
@@ -110,9 +100,7 @@ async def send_recipe(context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(chat_id=CHAT_ID, text=full_text[:4096], parse_mode="HTML")
     except Exception as e:
         logging.warning(f"❗ Ошибка при отправке рецепта {photo_file}: {e}")
-        await context.bot.send_message(chat_id=CHAT_ID, text=f"{heading}
-
-{body[:4096]}", parse_mode="HTML")
+        await context.bot.send_message(chat_id=CHAT_ID, text=f"{heading}\n\n{body[:4096]}", parse_mode="HTML")
 
 # === Тестовая команда ===
 async def test_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
