@@ -1,129 +1,91 @@
 import os
-import random
-import logging
-import pandas as pd
-import nest_asyncio
 import asyncio
-import threading
-import signal
+import logging
+import datetime
+import random
 from flask import Flask
-from telegram import Update
-from telegram.ext import Application
-from apscheduler.schedulers.background import BackgroundScheduler
-from pytz import timezone
+from telegram import Bot
+from telegram.constants import ParseMode
+from dotenv import load_dotenv
+from firebase_admin import credentials, firestore, initialize_app
 
-from firebase_config import save_history, load_history
+# === INIT ===
+load_dotenv()
+TOKEN = os.getenv("BOT_TOKEN")
+CHAT_ID = int(os.getenv("CHAT_ID"))
+bot = Bot(token=TOKEN)
 
-# === НАСТРОЙКИ ===
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "7967951425:AAF7cvpngiLcUeKzLWtCWQO9JzFI5xMzY98")
-CHAT_ID = -1002132227893  # Рабочий чат
+# Firebase init
+cred = credentials.Certificate("firebase.json")
+initialize_app(cred)
+db = firestore.client()
 
-logging.basicConfig(level=logging.INFO)
+# Flask app for external triggering
+app = Flask(__name__)
 
-# === Загрузка данных ===
-smoothies = pd.read_excel("smned.xlsx")
-recipes = pd.read_excel("recaur.xlsx")
+# === FILES ===
+SMOOTHIE_FILE = "smoothies.txt"
+RECIPE_FILE = "recipes.txt"
 
-# === История из Firebase ===
-logging.info("🔥 Загрузка истории из Firebase...")
-history = load_history() or {"smoothies": [], "recipes": [], "image_index": 0}
+# === HELPERS ===
+def read_file(filename):
+    with open(filename, "r", encoding="utf-8") as f:
+        content = f.read()
+    return [x.strip() for x in content.split("\n\n") if x.strip()]
 
-# === Отправка смузи ===
-async def send_smoothie():
-    unused = [row for _, row in smoothies.iterrows() if str(row["Номер"]) not in history["smoothies"]]
-    if not unused:
-        history["smoothies"] = []
-        unused = [row for _, row in smoothies.iterrows()]
-    smoothie = random.choice(unused)
-    history["smoothies"].append(str(smoothie["Номер"]))
-    save_history(history)
+def get_history_key(file):
+    return "smoothie" if file == SMOOTHIE_FILE else "recipe"
 
-    image_files = sorted(os.listdir("smoothie_images"))
-    image_path = os.path.join("smoothie_images", image_files[history["image_index"] % len(image_files)])
-    history["image_index"] += 1
-    save_history(history)
+def get_next_content(file):
+    docs = read_file(file)
+    key = get_history_key(file)
+    history_ref = db.collection("history").document(key)
+    history_doc = history_ref.get()
 
-    heading = "\U0001F964 <b>Смузи недели</b>\n\U0001F343 Из коллекции школы йоги ISVARA \U0001F343\n\n"
-    title = f"<b>{smoothie['Название']}</b>"
-    body = smoothie['Приготовление']
-    full_text = f"{heading}{title}\n\n{body}"
+    if history_doc.exists:
+        history = history_doc.to_dict().get("items", [])
+    else:
+        history = []
 
-    try:
-        with open(image_path, "rb") as photo:
-            if len(full_text) <= 1024:
-                await bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=full_text, parse_mode="HTML")
-            else:
-                await bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=f"{heading}{title}", parse_mode="HTML")
-                await bot.send_message(chat_id=CHAT_ID, text=body[:4096], parse_mode="HTML")
-    except Exception as e:
-        logging.warning(f"❗ Ошибка при отправке смузи {image_path}: {e}")
-        await bot.send_message(chat_id=CHAT_ID, text=full_text[:4096], parse_mode="HTML")
+    remaining = [x for x in docs if x not in history]
 
-# === Отправка рецепта ===
-async def send_recipe():
-    unused = [row for _, row in recipes.iterrows() if str(row["Unnamed: 0"]) not in history["recipes"]]
-    if not unused:
-        history["recipes"] = []
-        unused = [row for _, row in recipes.iterrows()]
-    recipe = random.choice(unused)
-    history["recipes"].append(str(recipe["Unnamed: 0"]))
-    save_history(history)
+    if not remaining:
+        history = []
+        remaining = docs
 
-    heading = "<b>ВЕГЕТАРИАНСКИЙ РЕЦЕПТ НА ВЫХОДНЫЕ</b>\n\U0001F343 Из коллекции школы йоги ISVARA \U0001F343\n\n"
-    title = f"<b>{recipe['Название рецепта']}</b>"
-    body_parts = []
-    for col in ["описание-порции", "Ингредиенты", "Приготовление (шаги)", "Финальный абзац (польза/советы)"]:
-        val = recipe.get(col)
-        if isinstance(val, str) and val.strip():
-            body_parts.append(val.strip())
-    body = "\n\n".join(body_parts)
-    full_text = f"{heading}{title}\n\n{body}".strip()
+    selected = random.choice(remaining)
+    history.append(selected)
+    history_ref.set({"items": history})
+    return selected
 
-    number = str(recipe["Unnamed: 0"])
-    photo_file = next((f for f in os.listdir("recipe_images") if f.startswith(number)), None)
+def split_post(text):
+    if "\n" not in text:
+        return text, None
+    title, body = text.split("\n", 1)
+    return f"<b>{title.strip()}</b>", body.strip()
 
-    try:
-        if photo_file:
-            with open(os.path.join("recipe_images", photo_file), "rb") as photo:
-                if len(full_text) <= 1024:
-                    await bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=full_text, parse_mode="HTML")
-                else:
-                    await bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=f"{heading}{title}", parse_mode="HTML")
-                    await bot.send_message(chat_id=CHAT_ID, text=body[:4096], parse_mode="HTML")
-        else:
-            await bot.send_message(chat_id=CHAT_ID, text=full_text[:4096], parse_mode="HTML")
-    except Exception as e:
-        logging.warning(f"❗ Ошибка при отправке рецепта {photo_file}: {e}")
-        await bot.send_message(chat_id=CHAT_ID, text=f"{heading}\n\n{body[:4096]}", parse_mode="HTML")
+async def send_to_telegram(content):
+    title, body = split_post(content)
+    await bot.send_message(chat_id=CHAT_ID, text=title, parse_mode=ParseMode.HTML)
+    if body:
+        await bot.send_message(chat_id=CHAT_ID, text=body)
 
-# === Flask-сервер для Render ===
-app_flask = Flask(__name__)
+# === ROUTES ===
+@app.route("/trigger")
+def trigger():
+    now = datetime.datetime.now()
+    minute = now.minute
 
-@app_flask.route("/")
-def home():
-    return "Bot is alive"
+    if minute % 2 == 0:
+        file = RECIPE_FILE
+    else:
+        file = SMOOTHIE_FILE
 
-# === Инициализация бота и планировщика ===
-application = Application.builder().token(BOT_TOKEN).build()
-bot = application.bot
-scheduler = BackgroundScheduler(timezone=timezone("Europe/Moscow"))
-scheduler.add_job(lambda: asyncio.run(send_smoothie()), "interval", minutes=1)
-scheduler.add_job(lambda: asyncio.run(send_recipe()), "interval", minutes=1)
+    content = get_next_content(file)
+    asyncio.run(send_to_telegram(content))
+    return "Triggered", 200
 
-# === Завершение ===
-def shutdown(*_):
-    logging.info("\u274C Завершение...")
-    scheduler.shutdown()
-    asyncio.run(application.stop())
-    os._exit(0)
-
-signal.signal(signal.SIGINT, shutdown)
-signal.signal(signal.SIGTERM, shutdown)
-
-# === Запуск ===
+# === MAIN ===
 if __name__ == "__main__":
-    nest_asyncio.apply()
-    scheduler.start()
-    threading.Thread(target=lambda: app_flask.run(host="0.0.0.0", port=10000)).start()
-    logging.info("\u2705 Бот и планировщик запущены")
-    application.run_async()
+    logging.basicConfig(level=logging.INFO)
+    app.run(host="0.0.0.0", port=10000)
