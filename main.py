@@ -147,7 +147,8 @@ def trigger():
             file = SMOOTHIE_FILE
 
         content = get_next_content(file)
-        loop.run_until_complete(send_to_telegram(content))
+        filetype = "recipe" if file == RECIPE_FILE else "smoothie"
+        loop.run_until_complete(send_to_telegram(content, filetype))
         return "Triggered", 200
 
     except Exception as e:
