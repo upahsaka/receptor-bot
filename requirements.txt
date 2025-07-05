@@ -6,3 +6,4 @@ flask
 openpyxl
 firebase-admin
 nest_asyncio
+httpx
