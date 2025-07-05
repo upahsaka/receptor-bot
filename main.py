@@ -36,7 +36,7 @@ def read_file(filename):
     df = pd.read_excel(filename)
     docs = []
     for _, row in df.iterrows():
-        text = f"{row[0]}\n{row[1]}"
+        text = f"{row.iloc[0]}\n{row.iloc[1]}"
         docs.append(text.strip())
     return docs
 
