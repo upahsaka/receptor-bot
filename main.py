@@ -3,6 +3,7 @@ import asyncio
 import logging
 import datetime
 import random
+import pandas as pd
 from flask import Flask
 from telegram import Bot
 from telegram.constants import ParseMode
@@ -24,14 +25,17 @@ db = firestore.client()
 app = Flask(__name__)
 
 # === FILES ===
-SMOOTHIE_FILE = "smoothies.txt"
-RECIPE_FILE = "recipes.txt"
+SMOOTHIE_FILE = "smned.xlsx"
+RECIPE_FILE = "recaur.xlsx"
 
 # === HELPERS ===
 def read_file(filename):
-    with open(filename, "r", encoding="utf-8") as f:
-        content = f.read()
-    return [x.strip() for x in content.split("\n\n") if x.strip()]
+    df = pd.read_excel(filename)
+    docs = []
+    for _, row in df.iterrows():
+        text = f"{row[0]}\n{row[1]}"
+        docs.append(text.strip())
+    return docs
 
 def get_history_key(file):
     return "smoothie" if file == SMOOTHIE_FILE else "recipe"
