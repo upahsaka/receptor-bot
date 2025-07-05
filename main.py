@@ -86,9 +86,9 @@ def trigger():
         return "Triggered", 200
 
     except Exception as e:
+        import traceback
         logging.exception("🔥 Ошибка в /trigger")
-        return f"Error: {e}", 500
-
+        return f"<pre>{traceback.format_exc()}</pre>", 500
 
 # === MAIN ===
 if __name__ == "__main__":
