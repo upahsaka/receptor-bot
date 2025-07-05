@@ -1,5 +1,6 @@
 import os
 import asyncio
+import nest_asyncio
 import logging
 import datetime
 import random
@@ -22,6 +23,8 @@ initialize_app(cred)
 db = firestore.client()
 
 # Flask app for external triggering
+nest_asyncio.apply()
+loop = asyncio.get_event_loop()
 app = Flask(__name__)
 
 # === FILES ===
@@ -86,7 +89,7 @@ def trigger():
             file = SMOOTHIE_FILE
 
         content = get_next_content(file)
-        asyncio.run(send_to_telegram(content))
+        loop.run_until_complete(send_to_telegram(content))
         return "Triggered", 200
 
     except Exception as e:
