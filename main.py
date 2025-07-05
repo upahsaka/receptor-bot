@@ -70,20 +70,25 @@ async def send_to_telegram(content):
     if body:
         await bot.send_message(chat_id=CHAT_ID, text=body)
 
-# === ROUTES ===
 @app.route("/trigger")
 def trigger():
-    now = datetime.datetime.now()
-    minute = now.minute
+    try:
+        now = datetime.datetime.now()
+        minute = now.minute
 
-    if minute % 2 == 0:
-        file = RECIPE_FILE
-    else:
-        file = SMOOTHIE_FILE
+        if minute % 2 == 0:
+            file = RECIPE_FILE
+        else:
+            file = SMOOTHIE_FILE
 
-    content = get_next_content(file)
-    asyncio.run(send_to_telegram(content))
-    return "Triggered", 200
+        content = get_next_content(file)
+        asyncio.run(send_to_telegram(content))
+        return "Triggered", 200
+
+    except Exception as e:
+        logging.exception("🔥 Ошибка в /trigger")
+        return f"Error: {e}", 500
+
 
 # === MAIN ===
 if __name__ == "__main__":
