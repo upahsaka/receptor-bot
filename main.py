@@ -165,15 +165,18 @@ async def send_to_telegram(content, filetype):
 def trigger():
     try:
         now = datetime.datetime.now()
-        minute = now.minute
+        weekday = now.weekday()
 
-        if minute % 2 == 0:
+        if weekday == 5:  # Saturday
             file = RECIPE_FILE
-        else:
+            filetype = "recipe"
+        elif weekday == 1:  # Tuesday
             file = SMOOTHIE_FILE
+            filetype = "smoothie"
+        else:
+            return "⏳ Not scheduled today", 200
 
         content = get_next_content(file)
-        filetype = "recipe" if file == RECIPE_FILE else "smoothie"
         loop.run_until_complete(send_to_telegram(content, filetype))
         return "Triggered", 200
 
@@ -181,6 +184,7 @@ def trigger():
         import traceback
         logging.exception("🔥 Ошибка в /trigger")
         return f"<pre>{traceback.format_exc()}</pre>", 500
+
 
 # === MAIN ===
 if __name__ == "__main__":
