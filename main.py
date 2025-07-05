@@ -151,15 +151,15 @@ async def send_to_telegram(content, filetype):
         if image_path:
             with open(image_path, "rb") as photo:
                 if len(content) <= 1024:
-                    await bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=content, parse_mode=ParseMode.HTML)
+                    await bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=content, parse_mode=ParseMode.HTML,message_thread_id=3)
                 else:
-                    await bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=title, parse_mode=ParseMode.HTML)
-                    await bot.send_message(chat_id=CHAT_ID, text=body[:4096], parse_mode=ParseMode.HTML)
+                    await bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=title, parse_mode=ParseMode.HTMLmessage_thread_id=3)
+                    await bot.send_message(chat_id=CHAT_ID, text=body[:4096], parse_mode=ParseMode.HTML,message_thread_id=3)
         else:
-            await bot.send_message(chat_id=CHAT_ID, text=content[:4096], parse_mode=ParseMode.HTML)
+            await bot.send_message(chat_id=CHAT_ID, text=content[:4096], parse_mode=ParseMode.HTML,message_thread_id=3)
     except Exception as e:
         logging.warning(f"❗ Ошибка при отправке с фото: {e}")
-        await bot.send_message(chat_id=CHAT_ID, text=content[:4096], parse_mode=ParseMode.HTML)
+        await bot.send_message(chat_id=CHAT_ID, text=content[:4096], parse_mode=ParseMode.HTML,message_thread_id=3)
 
 @app.route("/trigger")
 def trigger():
