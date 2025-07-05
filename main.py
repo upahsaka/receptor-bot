@@ -190,3 +190,11 @@ def trigger():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     app.run(host="0.0.0.0", port=10000)
+
+    # 👉 Временно отправим смузи
+    content = get_next_content(SMOOTHIE_FILE)
+    loop.run_until_complete(send_to_telegram(content, "smoothie"))
+
+    # Или рецепт:
+    # content = get_next_content(RECIPE_FILE)
+    # loop.run_until_complete(send_to_telegram(content, "recipe"))
