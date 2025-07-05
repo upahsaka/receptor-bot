@@ -34,11 +34,31 @@ RECIPE_FILE = "recaur.xlsx"
 # === HELPERS ===
 def read_file(filename):
     df = pd.read_excel(filename)
-    docs = []
-    for _, row in df.iterrows():
-        text = f"{row.iloc[0]}\n{row.iloc[1]}"
-        docs.append(text.strip())
-    return docs
+    items = []
+
+    if "Название" in df.columns and "Приготовление" in df.columns:
+        # Смузи
+        for _, row in df.iterrows():
+            title = str(row["Название"]).strip()
+            prep = str(row["Приготовление"]).strip()
+            number = str(row["Номер"]).strip() if "Номер" in row else ""
+            text = f"№{number}\n{title}\n\n{prep}" if number else f"{title}\n\n{prep}"
+            items.append(text)
+    elif "Название рецепта" in df.columns:
+        # Рецепты
+        for _, row in df.iterrows():
+            parts = []
+            title = str(row["Название рецепта"]).strip()
+            for col in ["описание-порции", "Ингредиенты", "Приготовление (шаги)", "Финальный абзац (польза/советы)"]:
+                if col in row and isinstance(row[col], str) and row[col].strip():
+                    parts.append(row[col].strip())
+            full = f"{title}\n\n" + "\n\n".join(parts)
+            items.append(full)
+    else:
+        logging.warning("Неизвестная структура Excel-файла.")
+
+    return items
+    
 
 def get_history_key(file):
     return "smoothie" if file == SMOOTHIE_FILE else "recipe"
@@ -71,11 +91,49 @@ def split_post(text):
     title, body = text.split("\n", 1)
     return f"<b>{title.strip()}</b>", body.strip()
 
-async def send_to_telegram(content):
+async def send_to_telegram(content, filetype):
     title, body = split_post(content)
-    await bot.send_message(chat_id=CHAT_ID, text=title, parse_mode=ParseMode.HTML)
-    if body:
-        await bot.send_message(chat_id=CHAT_ID, text=body)
+
+    # === Найдём фото ===
+    image_path = None
+    if filetype == "smoothie":
+        image_files = sorted(os.listdir("smoothie_images"))
+        index_key = "smoothie_image_index"
+    else:
+        number = title.strip().split()[0].replace("№", "") if "№" in title else None
+        image_files = [f for f in os.listdir("recipe_images") if number and f.startswith(number)]
+        index_key = "recipe_image_index"
+
+    # === Получим/обновим индекс из Firestore ===
+    index_doc_ref = db.collection("history").document("image_index")
+    index_doc = index_doc_ref.get()
+    if index_doc.exists:
+        index_data = index_doc.to_dict()
+        index = index_data.get(index_key, 0)
+    else:
+        index = 0
+
+    # === Назначим путь к фото (если есть) ===
+    if filetype == "smoothie" and image_files:
+        image_path = os.path.join("smoothie_images", image_files[index % len(image_files)])
+        index += 1
+        index_doc_ref.set({index_key: index}, merge=True)
+    elif filetype == "recipe" and image_files:
+        image_path = os.path.join("recipe_images", image_files[0])
+
+    try:
+        if image_path:
+            with open(image_path, "rb") as photo:
+                if len(content) <= 1024:
+                    await bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=content, parse_mode=ParseMode.HTML)
+                else:
+                    await bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=title, parse_mode=ParseMode.HTML)
+                    await bot.send_message(chat_id=CHAT_ID, text=body[:4096], parse_mode=ParseMode.HTML)
+        else:
+            await bot.send_message(chat_id=CHAT_ID, text=content[:4096], parse_mode=ParseMode.HTML)
+    except Exception as e:
+        logging.warning(f"❗ Ошибка при отправке с фото: {e}")
+        await bot.send_message(chat_id=CHAT_ID, text=content[:4096], parse_mode=ParseMode.HTML)
 
 @app.route("/trigger")
 def trigger():
