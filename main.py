@@ -16,7 +16,7 @@ CHAT_ID = int(os.getenv("CHAT_ID"))
 bot = Bot(token=TOKEN)
 
 # Firebase init
-cred = credentials.Certificate("firebase.json")
+cred = credentials.Certificate("/etc/secrets/firebase_key.json")
 initialize_app(cred)
 db = firestore.client()
 
