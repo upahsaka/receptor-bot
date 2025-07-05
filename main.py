@@ -41,23 +41,42 @@ def read_file(filename):
         for _, row in df.iterrows():
             title = str(row["Название"]).strip()
             prep = str(row["Приготовление"]).strip()
-            number = str(row["Номер"]).strip() if "Номер" in row else ""
-            text = f"№{number}\n{title}\n\n{prep}" if number else f"{title}\n\n{prep}"
-            items.append(text)
+            number = str(row["Номер"]).strip()
+
+            heading = "🥤 <b>Смузи недели</b>\n🍃 Из коллекции школы йоги ISVARA 🍃"
+            title_tag = f"<b>{title}</b>"
+            content = f"{heading}\n\n{title_tag}\n\n{prep}".strip()
+
+            # Привязываем номер для картинки, но не показываем его
+            full = f"__id__{number}\n{content}"
+            items.append(full)
+
     elif "Название рецепта" in df.columns:
         # Рецепты
         for _, row in df.iterrows():
-            parts = []
+            number = str(row["Unnamed: 0"]).strip()
             title = str(row["Название рецепта"]).strip()
+
+            heading = "<b>🍲 ВЕГЕТАРИАНСКИЙ РЕЦЕПТ НА ВЫХОДНЫЕ</b>\n🍃 Из коллекции школы йоги ISVARA 🍃"
+            title_tag = f"<b>{title}</b>"
+
+            parts = []
             for col in ["описание-порции", "Ингредиенты", "Приготовление (шаги)", "Финальный абзац (польза/советы)"]:
                 if col in row and isinstance(row[col], str) and row[col].strip():
                     parts.append(row[col].strip())
-            full = f"{title}\n\n" + "\n\n".join(parts)
+
+            body = "\n\n".join(parts)
+            content = f"{heading}\n\n{title_tag}\n\n{body}".strip()
+
+            # Привязываем номер для поиска изображения
+            full = f"__id__{number}\n{content}"
             items.append(full)
+
     else:
         logging.warning("Неизвестная структура Excel-файла.")
 
     return items
+
     
 
 def get_history_key(file):
@@ -92,6 +111,13 @@ def split_post(text):
     return f"<b>{title.strip()}</b>", body.strip()
 
 async def send_to_telegram(content, filetype):
+    # Вырежем служебный ID (для номера рецепта/смузи)
+    internal_id = None
+    if content.startswith("__id__"):
+        internal_id, content = content.split("\n", 1)
+        internal_id = internal_id.replace("__id__", "").strip()
+
+    
     title, body = split_post(content)
 
     # === Найдём фото ===
@@ -100,7 +126,7 @@ async def send_to_telegram(content, filetype):
         image_files = sorted(os.listdir("smoothie_images"))
         index_key = "smoothie_image_index"
     else:
-        number = title.strip().split()[0].replace("№", "") if "№" in title else None
+        number = internal_id
         image_files = [f for f in os.listdir("recipe_images") if number and f.startswith(number)]
         index_key = "recipe_image_index"
 
